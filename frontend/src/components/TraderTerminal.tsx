@@ -5,7 +5,6 @@ import {
   Zap, 
   Search, 
   Bell, 
-  Menu, 
   Info, 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -13,7 +12,9 @@ import {
   Pause,
   RefreshCw,
   CheckCircle,
-  X
+  X,
+  Activity,
+  Globe
 } from "lucide-react";
 
 interface Asset {
@@ -62,8 +63,9 @@ export default function TraderTerminal({
   const [activeTab, setActiveTab] = useState<"FOREX" | "COMMODITY">("FOREX");
   const [utcTime, setUtcTime] = useState("");
   const [simulatedOrder, setSimulatedOrder] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   
-  // Real-time clock update (UTC)
+  // UTC clock
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -77,70 +79,64 @@ export default function TraderTerminal({
     return () => clearInterval(interval);
   }, []);
 
-  // Filter assets based on activeTab (FOREX vs COMMODITIES)
+  // Filter assets based on activeTab (FOREX vs COMMODITIES) and search query
   const displayedAssets = useMemo(() => {
-    return assets.filter(a => a.type === activeTab).slice(0, 4);
-  }, [assets, activeTab]);
+    let filtered = assets.filter(a => a.type === activeTab);
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(a => 
+        a.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        a.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    return filtered.slice(0, 5);
+  }, [assets, activeTab, searchQuery]);
 
-  // Format quotes helper
   const getAssetDisplayName = (code: string) => {
     switch (code) {
-      case "EURUSD": return { name: "EUR/USD", desc: "EURO / US DOLLAR", initials: "EU" };
-      case "GBPUSD": return { name: "GBP/USD", desc: "POUND / US DOLLAR", initials: "GB" };
-      case "USDJPY": return { name: "USD/JPY", desc: "USD / YEN", initials: "UJ" };
-      case "AUDUSD": return { name: "AUD/USD", desc: "AUD / US DOLLAR", initials: "AU" };
-      case "USDCAD": return { name: "USD/CAD", desc: "USD / CAD", initials: "UC" };
-      case "USDCHF": return { name: "USD/CHF", desc: "USD / SWISS FRANC", initials: "UF" };
-      case "GOLD": return { name: "XAU/USD", desc: "GOLD SPOT", initials: "AU" };
-      case "SILVER": return { name: "XAG/USD", desc: "SILVER SPOT", initials: "AG" };
-      case "WTI": return { name: "Crude Oil", desc: "WTI / US DOLLAR", initials: "WT" };
-      case "BRENT": return { name: "Brent Crude", desc: "BRENT / US DOLLAR", initials: "BR" };
-      case "NATURAL_GAS": return { name: "Natural Gas", desc: "NGAS / US DOLLAR", initials: "NG" };
-      case "COPPER": return { name: "Copper", desc: "COPPER / USD", initials: "CU" };
-      default: return { name: code, desc: "ASSET SPOT", initials: code.slice(0, 2) };
+      case "EURUSD": return { name: "EUR/USD", desc: "Euro / US Dollar", initials: "EU" };
+      case "GBPUSD": return { name: "GBP/USD", desc: "Pound / US Dollar", initials: "GB" };
+      case "USDJPY": return { name: "USD/JPY", desc: "US Dollar / Yen", initials: "UJ" };
+      case "AUDUSD": return { name: "AUD/USD", desc: "Aussie / US Dollar", initials: "AU" };
+      case "USDCAD": return { name: "USD/CAD", desc: "US Dollar / Loonie", initials: "UC" };
+      case "USDCHF": return { name: "USD/CHF", desc: "USD / Swiss Franc", initials: "UF" };
+      case "GOLD": return { name: "XAU/USD", desc: "Gold Spot Price", initials: "AU" };
+      case "SILVER": return { name: "XAG/USD", desc: "Silver Spot Price", initials: "AG" };
+      case "WTI": return { name: "Crude Oil WTI", desc: "Light Sweet Crude", initials: "WT" };
+      case "BRENT": return { name: "Brent Crude", desc: "North Sea Brent", initials: "BR" };
+      case "NATURAL_GAS": return { name: "Natural Gas", desc: "Henry Hub Spot", initials: "NG" };
+      case "COPPER": return { name: "Copper", desc: "Copper COMEX", initials: "CU" };
+      default: return { name: code, desc: "Asset Spot Price", initials: code.slice(0, 2) };
     }
   };
 
-  // Extract pip components for representation
   const formatQuotePrice = (price: number, code: string) => {
     if (!price) return { base: "0.0000", pip: "" };
-    
     let str = "";
     if (code.includes("JPY") || code === "WTI" || code === "BRENT" || code === "GOLD") {
       str = price.toFixed(2);
-      // For 2 decimals, make the last one smaller
       return { base: str.slice(0, -1), pip: str.slice(-1) };
     } else if (code === "NATURAL_GAS" || code === "COPPER") {
       str = price.toFixed(3);
       return { base: str.slice(0, -1), pip: str.slice(-1) };
     } else {
-      // 4 or 5 decimals
       str = price.toFixed(5);
-      // E.g., 1.08425 -> base "1.0842", pip "5"
       return { base: str.slice(0, -1), pip: str.slice(-1) };
     }
   };
 
-  // Calculate sentiment percentages dynamically based on news feed
   const sentiment = useMemo(() => {
     const activeNews = news.filter(n => n.impact_direction !== "Neutral");
-    if (activeNews.length === 0) return { bullish: 64, bearish: 36 }; // default from screenshot
-    
+    if (activeNews.length === 0) return { bullish: 64, bearish: 36 };
     const bullishCount = activeNews.filter(n => n.impact_direction === "Bullish").length;
     const total = activeNews.length;
     const bullishPct = Math.round((bullishCount / total) * 100);
-    return {
-      bullish: bullishPct,
-      bearish: 100 - bullishPct
-    };
+    return { bullish: bullishPct, bearish: 100 - bullishPct };
   }, [news]);
 
-  // Handle simulated trade
   const handleTrade = (direction: "BUY" | "SELL") => {
     const selectedAssetInfo = getAssetDisplayName(selectedAsset);
     const priceData = latestPrices[selectedAsset] || { price: 1.0842, change: 0.12 };
     const formatted = formatQuotePrice(priceData.price, selectedAsset);
-    
     setSimulatedOrder({
       direction,
       assetName: selectedAssetInfo.name,
@@ -150,272 +146,269 @@ export default function TraderTerminal({
     });
   };
 
-  // Convert news items to relative times or styled tags
   const getNewsRelativeTime = (timestamp: string) => {
     const diff = Date.now() - new Date(timestamp).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return "Just now";
-    if (mins === 1) return "1 min ago";
-    if (mins < 60) return `${mins} mins ago`;
+    if (mins === 1) return "1m ago";
+    if (mins < 60) return `${mins}m ago`;
     const hrs = Math.floor(mins / 60);
-    if (hrs === 1) return "1 hour ago";
-    return `${hrs} hours ago`;
+    if (hrs === 1) return "1h ago";
+    return `${hrs}h ago`;
   };
 
   return (
-    <div className="relative w-full max-w-[380px] mx-auto rounded-3xl border-2 border-indigo-500/20 bg-[#090a0c] text-white shadow-[0_20px_50px_rgba(0,0,0,0.8),_0_0_30px_rgba(99,102,241,0.05)] overflow-hidden font-sans select-none flex flex-col h-[820px] transition-all duration-300">
+    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 relative select-none">
       
-      {/* Device notch decoration */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-4 bg-black rounded-b-xl z-20 flex items-center justify-center">
-        <div className="w-12 h-1 bg-zinc-900 rounded-full" />
-      </div>
-
-      {/* 1. Header Bar */}
-      <header className="relative z-10 pt-6 px-4 pb-3 flex items-center justify-between border-b border-zinc-900 bg-zinc-950/40">
-        <div className="flex items-center gap-3">
-          <Menu className="w-4 h-4 text-zinc-400 hover:text-white cursor-pointer transition-colors" />
-          <span className="text-[11px] font-black tracking-widest text-white uppercase">TRADERTERMINAL</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Search className="w-4 h-4 text-zinc-400 hover:text-white cursor-pointer transition-colors" />
-          <div className="relative">
-            <Bell className="w-4 h-4 text-zinc-400 hover:text-white cursor-pointer transition-colors" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          </div>
-        </div>
-      </header>
-
-      {/* Scrollable Container */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scrollbar-thin">
-        
-        {/* 2. Market Overview */}
-        <section className="space-y-2">
-          <div>
-            <h2 className="text-sm font-bold text-white tracking-tight">Market Overview</h2>
-            <p className="text-[10px] text-zinc-500 font-light mt-0.5">Real-time institutional liquidity feeds</p>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 border border-zinc-900/80 rounded-xl bg-zinc-950/30">
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 glow-text-emerald">MARKET STATUS: OPEN</span>
+      {/* LEFT COLUMN: Live Quotes & Instant Executions (7 Cols) */}
+      <div className="lg:col-span-7 space-y-6">
+        {/* Live Quotes Panel */}
+        <div className="p-5 border border-[#1a1d26] bg-[#111317] rounded-xl shadow-lg relative">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1a1d26] pb-4 mb-4">
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                <Globe className="w-4 h-4 text-emerald-400" />
+                Live Market Quotes
+              </h3>
+              <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest mt-1">
+                Institutional feeds & volatility indexes
+              </p>
             </div>
-            <span className="text-[9px] font-mono text-zinc-500 font-bold bg-zinc-950 px-2 py-0.5 rounded border border-zinc-900">UTC {utcTime}</span>
-          </div>
-        </section>
-
-        {/* 3. Live Quotes */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-zinc-400">Live Quotes</h3>
             
-            {/* Segmented Filter Tab */}
-            <div className="flex p-0.5 border border-zinc-800 rounded-lg bg-zinc-950/80">
-              <button 
-                onClick={() => setActiveTab("FOREX")}
-                className={`text-[8px] font-bold px-3 py-1 rounded transition-all cursor-pointer ${
-                  activeTab === "FOREX" 
-                    ? "bg-white text-black shadow-sm" 
-                    : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                FOREX
-              </button>
-              <button 
-                onClick={() => setActiveTab("COMMODITY")}
-                className={`text-[8px] font-bold px-3 py-1 rounded transition-all cursor-pointer ${
-                  activeTab === "COMMODITY" 
-                    ? "bg-white text-black shadow-sm" 
-                    : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                COMMODITIES
-              </button>
+            <div className="flex items-center gap-2.5">
+              {/* Search Box */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-zinc-600 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search Asset..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 border border-[#1a1d26] bg-[#0c0d12]/60 text-[10px] rounded-lg text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500/40 w-36 transition-all"
+                />
+              </div>
+
+              {/* Tabs */}
+              <div className="flex p-0.5 border border-[#1a1d26] rounded-lg bg-[#0c0d12]">
+                {(["FOREX", "COMMODITY"] as const).map((tab) => (
+                  <button 
+                    key={tab}
+                    onClick={() => {
+                      setActiveTab(tab);
+                      setSearchQuery("");
+                    }}
+                    className={`text-[8.5px] font-black px-3 py-1 rounded transition-all cursor-pointer uppercase ${
+                      activeTab === tab 
+                        ? "bg-[#111317] text-emerald-400 shadow-sm border border-[#1b1e25]" 
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {tab === "FOREX" ? "Forex" : "Commodities"}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Quotes Table */}
+          {/* Quotes Grid / Table */}
           <div className="space-y-2">
-            <div className="grid grid-cols-12 text-[8px] text-zinc-600 font-extrabold uppercase tracking-wider px-2">
-              <div className="col-span-5">Asset</div>
+            <div className="grid grid-cols-12 text-[8px] text-zinc-600 font-extrabold uppercase tracking-wider px-3 pb-1 border-b border-[#1a1d26]/40">
+              <div className="col-span-5">Trading Instrument</div>
               <div className="col-span-3 text-right">Price</div>
-              <div className="col-span-3 text-right">Change %</div>
+              <div className="col-span-3 text-right">Net Change</div>
               <div className="col-span-1"></div>
             </div>
 
-            <div className="space-y-1.5">
-              {displayedAssets.map((asset) => {
-                const nameInfo = getAssetDisplayName(asset.code);
-                const priceData = latestPrices[asset.code] || { price: 1.0842, change: 0.12 };
-                const formatted = formatQuotePrice(priceData.price, asset.code);
-                const isPositive = priceData.change >= 0;
-                const isSelected = selectedAsset === asset.code;
+            <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+              {displayedAssets.length === 0 ? (
+                <div className="py-6 text-center text-zinc-600 text-[10px] font-medium uppercase tracking-widest">
+                  No matching assets found
+                </div>
+              ) : (
+                displayedAssets.map((asset) => {
+                  const nameInfo = getAssetDisplayName(asset.code);
+                  const priceData = latestPrices[asset.code] || { price: 1.0842, change: 0.12 };
+                  const formatted = formatQuotePrice(priceData.price, asset.code);
+                  const isPositive = priceData.change >= 0;
+                  const isSelected = selectedAsset === asset.code;
+                  
+                  const sparkBars = isPositive 
+                    ? [4, 7, 5, 8, 10] 
+                    : [10, 8, 6, 5, 3];
 
-                // Dynamic mini bar-chart sparkline data
-                const sparkBars = isPositive 
-                  ? [4, 7, 5, 8, 10] 
-                  : [10, 8, 6, 5, 3];
-
-                return (
-                  <div
-                    key={asset.code}
-                    onClick={() => onSelectAsset(asset.code)}
-                    className={`grid grid-cols-12 items-center p-2.5 border rounded-xl cursor-pointer transition-all duration-300 ${
-                      isSelected 
-                        ? "border-emerald-500/35 bg-emerald-500/[0.04] shadow-[0_0_12px_rgba(16,185,129,0.04)]" 
-                        : "border-zinc-900/60 bg-zinc-950/20 hover:border-zinc-800 hover:bg-zinc-950/40"
-                    }`}
-                  >
-                    {/* Circle Badge + Name */}
-                    <div className="col-span-5 flex items-center gap-2.5 min-w-0">
-                      <div className={`w-7 h-7 flex-shrink-0 rounded-full flex items-center justify-center text-[10px] font-extrabold border ${
+                  return (
+                    <div
+                      key={asset.code}
+                      onClick={() => onSelectAsset(asset.code)}
+                      className={`grid grid-cols-12 items-center p-3 border rounded-xl cursor-pointer transition-all duration-200 ${
                         isSelected 
-                          ? "border-emerald-500/25 bg-emerald-500/5 text-emerald-400" 
-                          : "border-zinc-800 bg-zinc-900/60 text-zinc-300"
-                      }`}>
-                        {nameInfo.initials}
+                          ? "border-emerald-500/25 bg-emerald-500/[0.03] shadow-[0_0_15px_rgba(16,185,129,0.03)]" 
+                          : "border-[#1a1d26] bg-[#0c0d12]/30 hover:border-zinc-800 hover:bg-[#0c0d12]/60"
+                      }`}
+                    >
+                      {/* Initials & Labels */}
+                      <div className="col-span-5 flex items-center gap-3 min-w-0">
+                        <div className={`w-8 h-8 flex-shrink-0 rounded-lg flex items-center justify-center text-[10px] font-black border ${
+                          isSelected 
+                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" 
+                            : "border-[#1a1d26] bg-[#0c0d12] text-zinc-400"
+                        }`}>
+                          {nameInfo.initials}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-[11px] font-black text-zinc-200 tracking-tight leading-none truncate">{nameInfo.name}</span>
+                          <span className="block text-[8px] text-zinc-500 font-semibold uppercase tracking-widest mt-1 truncate">{nameInfo.desc}</span>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <span className="block text-[11px] font-bold text-zinc-100 tracking-tight leading-tight truncate">{nameInfo.name}</span>
-                        <span className="block text-[8px] text-zinc-500 font-light truncate">{nameInfo.desc}</span>
+
+                      {/* Live Price */}
+                      <div className="col-span-3 text-right font-mono font-bold text-xs tracking-tight text-zinc-200">
+                        {formatted.base}
+                        <sup className="text-[9px] font-black ml-[0.5px]">{formatted.pip}</sup>
+                      </div>
+
+                      {/* Change badge */}
+                      <div className="col-span-3 text-right flex justify-end">
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md border tracking-tight ${
+                          isPositive 
+                            ? "bg-emerald-500/5 border-emerald-500/10 text-emerald-400" 
+                            : "bg-rose-500/5 border-rose-500/10 text-rose-400"
+                        }`}>
+                          {isPositive ? "+" : ""}{priceData.change.toFixed(2)}%
+                        </span>
+                      </div>
+
+                      {/* Sparkline */}
+                      <div className="col-span-1 flex items-end justify-end gap-[1.5px] h-3.5 px-1">
+                        {sparkBars.map((height, i) => (
+                          <div 
+                            key={i} 
+                            className={`w-[1.5px] rounded-t-sm ${isPositive ? "bg-emerald-500/35" : "bg-rose-500/35"}`} 
+                            style={{ height: `${height * 10}%` }}
+                          />
+                        ))}
                       </div>
                     </div>
-
-                    {/* Price with Pip superscript */}
-                    <div className="col-span-3 text-right font-semibold text-xs tracking-tight text-zinc-200">
-                      {formatted.base}
-                      <sup className="text-[9px] font-extrabold ml-[0.5px]">{formatted.pip}</sup>
-                    </div>
-
-                    {/* Change % pill */}
-                    <div className="col-span-3 text-right flex justify-end">
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-tight ${
-                        isPositive 
-                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 glow-text-emerald" 
-                          : "bg-rose-500/10 border-rose-500/20 text-rose-400 glow-text-rose"
-                      }`}>
-                        {isPositive ? "+" : ""}{priceData.change.toFixed(2)}%
-                      </span>
-                    </div>
-
-                    {/* Sparkline mini-bars */}
-                    <div className="col-span-1 flex items-end justify-end gap-[1.5px] h-3 px-1">
-                      {sparkBars.map((height, i) => (
-                        <div 
-                          key={i} 
-                          className={`w-[1.5px] rounded-t-sm ${isPositive ? "bg-emerald-500/40" : "bg-rose-500/40"}`} 
-                          style={{ height: `${height * 10}%` }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            
-            <button 
-              onClick={() => onSelectAsset(displayedAssets[0]?.code || "GOLD")}
-              className="w-full text-center py-2 bg-zinc-950/60 border border-zinc-900 rounded-xl hover:border-zinc-800 transition-colors text-[9px] font-bold uppercase tracking-wider text-zinc-400 mt-2 cursor-pointer"
-            >
-              View all assets ({assets.length})
-            </button>
-          </div>
-        </section>
-
-        {/* 4. Sentiment */}
-        <section className="p-3.5 border border-zinc-900 bg-zinc-950/20 rounded-xl space-y-3.5">
-          <div className="flex justify-between items-center">
-            <h4 className="text-[10px] font-extrabold tracking-widest text-zinc-400 uppercase">Sentiment</h4>
-            <Info className="w-3 h-3 text-zinc-600 cursor-pointer hover:text-zinc-400" />
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-[10px] font-extrabold tracking-wide">
-              <span className="text-emerald-400 glow-text-emerald">BULLISH {sentiment.bullish}%</span>
-              <span className="text-rose-400 glow-text-rose">BEARISH {sentiment.bearish}%</span>
-            </div>
-            
-            {/* Split Progress Bar */}
-            <div className="w-full h-1.5 rounded-full overflow-hidden flex bg-zinc-900">
-              <div className="h-full bg-emerald-500" style={{ width: `${sentiment.bullish}%` }} />
-              <div className="h-full bg-rose-500" style={{ width: `${sentiment.bearish}%` }} />
-            </div>
-            
-            <p className="text-[8px] text-zinc-500 text-center font-light leading-none pt-0.5">
-              Based on active market-shaking precedent indicators
-            </p>
-          </div>
-
-          {/* Top News Volume (Precedents volume) */}
-          <div className="space-y-1.5 pt-2.5 border-t border-zinc-900/60 text-[9px]">
-            <span className="block text-zinc-500 uppercase tracking-widest font-extrabold text-[8px]">TOP NEWS VOLUME</span>
-            <div className="flex justify-between text-zinc-200">
-              <span>FED Interest Rates</span>
-              <span className="font-semibold text-zinc-400">High</span>
-            </div>
-            <div className="flex justify-between text-zinc-200">
-              <span>US Non-Farm Payroll</span>
-              <span className="font-semibold text-zinc-400">Medium</span>
+                  );
+                })
+              )}
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* 5. Instant Trade */}
-        <section className="p-3.5 border border-zinc-900 bg-zinc-950/20 rounded-xl space-y-3">
-          <h4 className="text-[10px] font-extrabold tracking-widest text-amber-500 uppercase">Instant Trade</h4>
-          
-          <div className="grid grid-cols-2 gap-3.5">
+        {/* Quick Trade execution card */}
+        <div className="p-5 border border-[#1a1d26] bg-[#111317] rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-4 border-b border-[#1a1d26] pb-3">
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wider text-amber-500">
+                Instant execution
+              </h4>
+              <p className="text-[9px] text-zinc-500 font-semibold uppercase tracking-widest mt-0.5">
+                Target: {selectedAsset}
+              </p>
+            </div>
+            <span className="text-[10px] font-mono text-zinc-400 bg-[#0c0d12] px-2 py-0.5 border border-[#1a1d26] rounded">
+              UTC {utcTime}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => handleTrade("BUY")}
-              className="py-3 px-4 bg-[#00c076] hover:bg-[#00d683] transition-colors rounded-xl text-center cursor-pointer shadow-[0_4px_12px_rgba(0,192,118,0.2)] active:scale-95 duration-150"
+              className="py-3 px-4 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/30 hover:border-emerald-500/50 text-[#10b981] font-black text-xs uppercase tracking-widest rounded-xl text-center cursor-pointer transition-all active:scale-95 duration-100 flex flex-col items-center justify-center gap-1 shadow-md shadow-emerald-500/2"
             >
-              <span className="block font-black text-xs text-white leading-tight">BUY</span>
-              <span className="block text-[8px] text-white/70 uppercase font-bold tracking-wider mt-0.5">MARKET</span>
+              <span>BUY MARKET</span>
+              <span className="text-[7.5px] text-emerald-500/60 font-semibold">Instant Execution</span>
             </button>
             
             <button
               onClick={() => handleTrade("SELL")}
-              className="py-3 px-4 bg-[#ff4a6b] hover:bg-[#ff5d7b] transition-colors rounded-xl text-center cursor-pointer shadow-[0_4px_12px_rgba(255,74,107,0.2)] active:scale-95 duration-150"
+              className="py-3 px-4 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/30 hover:border-rose-500/50 text-[#f43f5e] font-black text-xs uppercase tracking-widest rounded-xl text-center cursor-pointer transition-all active:scale-95 duration-100 flex flex-col items-center justify-center gap-1 shadow-md shadow-rose-500/2"
             >
-              <span className="block font-black text-xs text-white leading-tight">SELL</span>
-              <span className="block text-[8px] text-white/70 uppercase font-bold tracking-wider mt-0.5">MARKET</span>
+              <span>SELL MARKET</span>
+              <span className="text-[7.5px] text-rose-500/60 font-semibold">Instant Execution</span>
             </button>
           </div>
-        </section>
+        </div>
+      </div>
 
-        {/* 6. Breaking Analysis Timeline (News timeline) */}
-        <section className="space-y-3.5">
-          <div className="flex justify-between items-center">
-            <h4 className="text-[10px] font-extrabold tracking-widest text-zinc-400 uppercase">Breaking Feed</h4>
+      {/* RIGHT COLUMN: Sentiment Gauge & Breaking Feed (5 Cols) */}
+      <div className="lg:col-span-5 space-y-6">
+        {/* Sentiment Gauge Card */}
+        <div className="p-5 border border-[#1a1d26] bg-[#111317] rounded-xl shadow-lg space-y-4">
+          <div className="flex justify-between items-center border-b border-[#1a1d26] pb-3">
+            <div>
+              <h4 className="text-xs font-black tracking-wider text-zinc-300 uppercase">Sentiment Meter</h4>
+              <p className="text-[8px] text-zinc-500 uppercase font-semibold tracking-wider mt-0.5">Aggregate market positioning</p>
+            </div>
+            <Info className="w-4 h-4 text-zinc-600 cursor-pointer hover:text-zinc-400" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-[10px] font-black tracking-wider">
+              <span className="text-emerald-400">BULLISH {sentiment.bullish}%</span>
+              <span className="text-rose-400">BEARISH {sentiment.bearish}%</span>
+            </div>
             
-            {/* Simulation controls */}
+            <div className="w-full h-2 rounded-full overflow-hidden flex bg-[#0c0d12] border border-[#1a1d26]/40">
+              <div className="h-full bg-emerald-500 shadow-[0_0_8px_#10b981]" style={{ width: `${sentiment.bullish}%` }} />
+              <div className="h-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" style={{ width: `${sentiment.bearish}%` }} />
+            </div>
+            
+            <p className="text-[8px] text-zinc-500 text-center font-medium leading-none pt-1">
+              Based on active macroeconomic precedent metrics
+            </p>
+          </div>
+
+          <div className="space-y-1.5 pt-3.5 border-t border-[#1a1d26] text-[9.5px]">
+            <span className="block text-zinc-500 uppercase tracking-widest font-extrabold text-[8px] mb-1">Impact Volatility Topics</span>
+            <div className="flex justify-between text-zinc-300 font-semibold">
+              <span>FED Interest Rates</span>
+              <span className="text-rose-400">High Volume</span>
+            </div>
+            <div className="flex justify-between text-zinc-300 font-semibold">
+              <span>US Non-Farm Payroll</span>
+              <span className="text-amber-400">Medium Volume</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Breaking News Feed Card */}
+        <div className="p-5 border border-[#1a1d26] bg-[#111317] rounded-xl shadow-lg space-y-4">
+          <div className="flex justify-between items-center border-b border-[#1a1d26] pb-3">
+            <div>
+              <h4 className="text-xs font-black tracking-wider text-zinc-300 uppercase">Live Macro Feed</h4>
+              <p className="text-[8px] text-zinc-500 uppercase font-semibold tracking-wider mt-0.5">Real-time market warnings</p>
+            </div>
+            
+            {/* Simulation buttons */}
             <div className="flex gap-2">
               <button 
                 onClick={onToggleSimulation}
                 className={`p-1.5 border rounded-lg transition-colors cursor-pointer ${
                   isSimulating 
                     ? "bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.06)]"
-                    : "border-zinc-800 text-zinc-500 hover:text-zinc-300"
+                    : "border-[#1a1d26] text-zinc-500 hover:text-zinc-300 hover:bg-[#0c0d12]"
                 }`}
                 title={isSimulating ? "Pause Simulation" : "Start Simulation"}
               >
-                {isSimulating ? <Pause className="w-2.5 h-2.5" /> : <Play className="w-2.5 h-2.5" />}
+                {isSimulating ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
               </button>
               <button 
                 onClick={onTriggerAlert}
                 disabled={isGenerating}
-                className="p-1.5 border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200 rounded-lg cursor-pointer disabled:opacity-50"
+                className="p-1.5 border border-[#1a1d26] text-zinc-400 hover:border-zinc-700 hover:text-zinc-200 rounded-lg cursor-pointer disabled:opacity-50"
                 title="Force Trigger Macro Alert"
               >
-                <RefreshCw className={`w-2.5 h-2.5 ${isGenerating ? "animate-spin" : ""}`} />
+                <RefreshCw className={`w-3 h-3 ${isGenerating ? "animate-spin" : ""}`} />
               </button>
             </div>
           </div>
 
-          {/* Timeline Stack */}
-          <div className="space-y-3">
+          {/* Timeline Feed stack */}
+          <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
             {news.length === 0 ? (
-              <div className="p-4 text-center border border-dashed border-zinc-900 rounded-xl bg-zinc-950/10 text-zinc-600 text-[10px]">
+              <div className="p-4 text-center border border-dashed border-[#1a1d26] rounded-xl bg-[#0c0d12]/30 text-zinc-600 text-[10px]">
                 Waiting for market-impacting macro updates...
               </div>
             ) : (
@@ -424,10 +417,9 @@ export default function TraderTerminal({
                 const isBearish = item.impact_direction === "Bearish";
                 const hasHighSeverity = item.impact_severity === "High";
                 
-                // Color mapping matching screenshot accents
                 let categoryText = "MARKET REPORT";
                 let categoryColor = "text-zinc-400";
-                let borderAccent = "border-l-[3px] border-l-zinc-700";
+                let borderAccent = "border-l-[3px] border-l-[#1a1d26]";
 
                 if (isBullish) {
                   categoryText = hasHighSeverity ? "BREAKING ANALYSIS" : "BULLISH ALERT";
@@ -442,42 +434,36 @@ export default function TraderTerminal({
                 return (
                   <div
                     key={item.id}
-                    className={`p-3 bg-zinc-950/30 border border-zinc-900/60 rounded-xl transition-all duration-300 hover:border-zinc-850 hover:bg-zinc-950/50 flex flex-col space-y-1.5 ${borderAccent}`}
+                    className={`p-3 bg-[#0c0d12]/40 border border-[#1a1d26] rounded-xl hover:border-zinc-800 hover:bg-[#0c0d12]/80 flex flex-col space-y-1.5 transition-all duration-200 ${borderAccent}`}
                   >
-                    <div className="flex items-center justify-between text-[8px] font-extrabold uppercase tracking-widest leading-none">
+                    <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest leading-none">
                       <span className={categoryColor}>{categoryText}</span>
-                      <div className="flex items-center gap-1 text-zinc-500 font-bold lowercase">
+                      <div className="flex items-center gap-1.5 text-zinc-500 font-bold">
                         <span>{getNewsRelativeTime(item.timestamp)}</span>
                         {hasHighSeverity && <Zap className="w-2.5 h-2.5 text-amber-500 fill-amber-500 animate-pulse" />}
                       </div>
                     </div>
 
-                    <h5 className="text-[11px] font-bold text-zinc-200 leading-snug">
+                    <h5 className="text-[10.5px] font-bold text-zinc-200 leading-snug">
                       {item.headline}
                     </h5>
 
-                    {/* Small tag row */}
-                    <div className="flex justify-between items-center pt-1 text-[7px] text-zinc-500 uppercase tracking-widest font-semibold border-t border-zinc-900/40 mt-0.5">
-                      <span>SRC: {item.source}</span>
-                      <span>{item.asset_tags.split(",")[0]}</span>
+                    <div className="flex justify-between items-center pt-1.5 text-[7px] text-zinc-500 uppercase tracking-widest font-black border-t border-[#1a1d26]/40 mt-1">
+                      <span>Source: {item.source}</span>
+                      <span className="text-zinc-400 font-extrabold">{item.asset_tags.split(",")[0]}</span>
                     </div>
                   </div>
                 );
               })
             )}
           </div>
-        </section>
-      </div>
-
-      {/* 7. Home screen swipe bar decoration */}
-      <div className="h-4 bg-[#090a0c] z-10 flex items-center justify-center pb-2">
-        <div className="w-28 h-1 bg-zinc-700 rounded-full" />
+        </div>
       </div>
 
       {/* 8. Order Execution Modal Overlay */}
       {simulatedOrder && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-30 flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-[280px] p-5 border border-zinc-800 bg-[#0d0e12] rounded-2xl text-center space-y-4 shadow-[0_15px_40px_rgba(0,0,0,0.9)] animate-scale-up relative">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-[300px] p-5 border border-[#1a1d26] bg-[#0c0d12] rounded-2xl text-center space-y-4 shadow-[0_15px_40px_rgba(0,0,0,0.9)] animate-scale-up relative">
             <button 
               onClick={() => setSimulatedOrder(null)}
               className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-200 cursor-pointer"
@@ -491,10 +477,10 @@ export default function TraderTerminal({
 
             <div>
               <h5 className="text-xs font-black uppercase tracking-wider text-emerald-400 leading-none">ORDER EXECUTED</h5>
-              <p className="text-[9px] text-zinc-500 uppercase mt-1">Simulated Market Trade Success</p>
+              <p className="text-[8.5px] text-zinc-500 uppercase mt-1">Simulated Market Trade Success</p>
             </div>
 
-            <div className="p-3 border border-zinc-900 bg-zinc-950/40 rounded-xl space-y-2 text-[10px] text-left text-zinc-400 font-mono">
+            <div className="p-3.5 border border-[#1a1d26] bg-[#111317] rounded-xl space-y-2 text-[10px] text-left text-zinc-400 font-mono">
               <div className="flex justify-between">
                 <span>ACTION:</span>
                 <span className={`font-bold ${simulatedOrder.direction === "BUY" ? "text-emerald-400" : "text-rose-400"}`}>
@@ -513,7 +499,7 @@ export default function TraderTerminal({
                 <span>VOLUME:</span>
                 <span className="text-white font-bold">{simulatedOrder.volume}</span>
               </div>
-              <div className="flex justify-between text-[8px] text-zinc-600 border-t border-zinc-900/60 pt-1.5">
+              <div className="flex justify-between text-[8px] text-zinc-600 border-t border-[#1a1d26] pt-1.5">
                 <span>TIME:</span>
                 <span>{simulatedOrder.timestamp}</span>
               </div>
