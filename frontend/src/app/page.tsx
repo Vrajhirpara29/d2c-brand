@@ -638,11 +638,29 @@ export default function Dashboard() {
                     <div className="pt-3 border-t border-[#1b2742]/30">
                       <span className="block text-zinc-555 text-[8px] uppercase font-black tracking-widest mb-1.5">Impacted Instrument Targets</span>
                       <div className="flex flex-wrap gap-1.5">
-                        {adhocResult.asset_tags.split(",").map((tag: string) => (
-                          <span key={tag} className="px-2 py-0.5 border border-[#1b2742]/40 rounded bg-[#111317]/60 text-[#00f0ff] font-extrabold text-[9px]">
-                            {tag.trim()}
-                          </span>
-                        ))}
+                        {adhocResult.asset_tags.split(",").map((tagRaw: string) => {
+                          const tag = tagRaw.trim();
+                          const isBullish = tag.includes("(Bullish)");
+                          const isBearish = tag.includes("(Bearish)");
+                          const cleanTag = tag.replace(/\s*\(.*?\)/g, "").trim();
+                          
+                          let textColor = "text-[#00f0ff]";
+                          let dotColor = "bg-[#00f0ff]";
+                          if (isBullish) {
+                            textColor = "text-[#00ff88]";
+                            dotColor = "bg-[#00ff88] shadow-[0_0_6px_rgba(0,255,136,0.5)]";
+                          } else if (isBearish) {
+                            textColor = "text-[#ff0055]";
+                            dotColor = "bg-[#ff0055] shadow-[0_0_6px_rgba(255,0,85,0.5)]";
+                          }
+                          
+                          return (
+                            <span key={tag} className={`inline-flex items-center gap-1.5 px-2 py-0.5 border border-[#1b2742]/40 rounded bg-[#06080d]/60 font-black text-[9.5px] ${textColor}`}>
+                              <span className={`w-1 h-1 rounded-full ${dotColor}`} />
+                              {cleanTag}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -746,9 +764,33 @@ export default function Dashboard() {
                                 {item.impact_direction.toUpperCase()} ({Math.round(item.confidence_score * 100)}% Confidence)
                               </span>
                             </div>
-                            <div className="flex justify-between font-semibold">
-                              <span className="text-zinc-550">Affected Pairs & Commodities:</span>
-                              <span className="text-[#00f0ff] font-bold">{item.asset_tags}</span>
+                            <div className="flex flex-col gap-1 pt-1 border-t border-[#1b2742]/20">
+                              <span className="text-zinc-550 font-bold uppercase tracking-wider text-[8px] block mb-1">Correlated Market Impacts:</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {item.asset_tags.split(",").map((tagRaw: string) => {
+                                  const tag = tagRaw.trim();
+                                  const isBullish = tag.includes("(Bullish)");
+                                  const isBearish = tag.includes("(Bearish)");
+                                  const cleanTag = tag.replace(/\s*\(.*?\)/g, "").trim();
+                                  
+                                  let textColor = "text-[#00f0ff]";
+                                  let dotColor = "bg-[#00f0ff]";
+                                  if (isBullish) {
+                                    textColor = "text-[#00ff88]";
+                                    dotColor = "bg-[#00ff88] shadow-[0_0_6px_rgba(0,255,136,0.5)]";
+                                  } else if (isBearish) {
+                                    textColor = "text-[#ff0055]";
+                                    dotColor = "bg-[#ff0055] shadow-[0_0_6px_rgba(255,0,85,0.5)]";
+                                  }
+                                  
+                                  return (
+                                    <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 border border-[#1b2742]/40 rounded bg-[#06080d]/80 font-black text-[8.5px] ${textColor}`}>
+                                      <span className={`w-1 h-1 rounded-full ${dotColor}`} />
+                                      {cleanTag}
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             </div>
                             <div className="flex justify-between text-[8.5px] text-zinc-500 font-bold">
                               <span>4H Volatility: {item.volatility_4h}</span>

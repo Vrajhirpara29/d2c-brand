@@ -259,9 +259,22 @@ def analyze_headline(headline: str) -> dict:
         if not affected_assets:
             affected_assets = ["EURUSD", "GOLD"]
 
-    # Deduplicate asset tags
-    tags = [f"#{asset}" for asset in set(affected_assets)]
-    tags_str = ",".join(tags)
+    # Format asset tags with individual directions
+    formatted_tags = []
+    for asset in set(affected_assets):
+        asset_dir = "Neutral"
+        if matched_precedent and "impacts" in matched_precedent:
+            impacts = matched_precedent["impacts"]
+            if asset in impacts:
+                asset_dir = impacts[asset][0]
+            elif "USD" in impacts:
+                dir_val = impacts["USD"][0]
+                if asset in ["EURUSD", "GBPUSD", "AUDUSD", "GOLD", "SILVER", "COPPER"]:
+                    asset_dir = "Bearish" if dir_val == "Bullish" else "Bullish"
+                else:
+                    asset_dir = dir_val
+        formatted_tags.append(f"{asset} ({asset_dir})")
+    tags_str = ", ".join(formatted_tags)
     
     # Determine impact severity (High, Medium, Low) based on 4-hour high volatility
     if direction == "Neutral":
@@ -282,34 +295,50 @@ def analyze_headline(headline: str) -> dict:
         "impact_severity": severity
     }
 
-# Mock news item generator for feeding live updates
+# Mock news item generator for feeding live updates from earliest premium sources
 MOCK_HEADLINES = [
-    ("Fed Chair Powell signals rate cut cycles are likely delayed due to inflation persistence", "hawkish_fed"),
-    ("US Consumer Price Index surges 3.8% YoY, beating analyst estimates of 3.4%", "cpi_beat"),
-    ("US CPI inflation cools to 2.9% in April, opening door for Fed policy easing", "cpi_miss"),
-    ("US Non-Farm Payrolls jump by 275k, blowing past expected 190k increase", "nfp_beat"),
-    ("US economy adds only 114k jobs in July, raising fears of economic slowdown", "nfp_miss"),
-    ("OPEC+ members agree to voluntary production cuts of 2.2 million barrels per day", "opec_cut"),
-    ("Geopolitical tensions rise in Middle East following shipping corridor blockade", "safe_haven"),
-    ("Saudi Arabia says ready to boost oil production capacity, sparking crude slump", "opec_increase"),
-    ("ECB President Lagarde flags potential interest rate hikes as wage growth accelerates", "hawkish_fed"), # maps to hawkish fed trigger locally
-    ("Fed cuts federal funds rate by 50 basis points to support cooling jobs market", "dovish_fed")
+    ("Powell signals Fed rate cut cycles are likely delayed due to sticky CPI core inflation", "hawkish_fed"),
+    ("US Consumer Price Index (CPI) surges 3.8% YoY, beating consensus estimates of 3.4%", "cpi_beat"),
+    ("US inflation cools rapidly to 2.9% in July, bolstering case for urgent rate cuts", "cpi_miss"),
+    ("US Non-Farm Payrolls (NFP) jump by 275k, blowing past expected 190k increase", "nfp_beat"),
+    ("US economy adds only 114k jobs, raising recession fears and Sahm Rule alerts", "nfp_miss"),
+    ("OPEC+ members agree to surprise voluntary production cuts of 2.2 million barrels per day", "opec_cut"),
+    ("Geopolitical conflict escalates in Middle East following drones targeting oil corridor tankers", "safe_haven"),
+    ("Saudi Arabia ready to ramp up crude output to defend market share, sparking price war", "opec_increase"),
+    ("ECB President Lagarde warns wage inflation keeps hawkish rate hikes on the table", "hawkish_fed"),
+    ("FOMC Statement: Fed cuts policy interest rates by 50bps to support softening job growth", "dovish_fed"),
+    ("US Core Retail Sales surge 0.8% MoM, indicating resilient domestic economic demand", "cpi_beat"),
+    ("Bank of Japan signals potential rate hike cycles ahead as yen drops to multi-decade low", "hawkish_fed"),
+    ("Flash: Red Sea commercial shipping corridor suspended after military drone attacks", "safe_haven"),
+    ("Gold prices break to record high above $2450/oz on aggressive global safe-haven buying", "safe_haven"),
+    ("Waller says rate cut cycles are getting closer if inflation keeps cooling down", "dovish_fed"),
+    ("Brent crude slides below $75 as OPEC+ outlines plans to gradually phase out supply cuts", "opec_increase"),
+    ("BOE raises Bank Rate by 25bps, warning of second-round inflation threats", "hawkish_fed")
 ]
 
 def generate_live_news_item() -> dict:
-    """Generates a random news feed item with computed impact metrics."""
-    headline, trigger = random.choice(MOCK_HEADLINES)
-    # Add minor random variations to headlines
-    prefix = random.choice(["BREAKING:", "ALERT:", "MARKET NEWS:", "MACRO UPDATE:"])
-    full_headline = f"{prefix} {headline}"
-    
-    impact = analyze_headline(full_headline)
-    sources = ["Bloomberg", "Reuters", "Financial Times", "MacroEdge Feed"]
-    
-    return {
-        "timestamp": datetime.utcnow(),
-        "headline": full_headline,
-        "summary": f"Analysts report that {full_headline.lower()}. This action has immediate ramifications for Forex futures and commodity hedges.",
-        "source": random.choice(sources),
-        **impact
-    }
+  """Generates a random news feed item simulating real-time high-speed feeds."""
+  headline, trigger = random.choice(MOCK_HEADLINES)
+  
+  # Select high-frequency news channels
+  channels = [
+      ("Bloomberg Terminal [BBG]", "Bloomberg Terminal"),
+      ("ForexFactory News Alert", "ForexFactory Feed"),
+      ("X / Twitter @ZeroHedge Feed", "Twitter / @ZeroHedge"),
+      ("X / Twitter @LiveSquawk Alert", "Twitter / @LiveSquawk"),
+      ("Reuters Eikon squawk line", "Reuters Eikon"),
+      ("Financial Times FastFT", "Financial Times"),
+      ("FXStreet Real-Time Alerts", "FXStreet Feed")
+  ]
+  channel_prefix, source_name = random.choice(channels)
+  
+  full_headline = f"[{channel_prefix}] {headline}"
+  impact = analyze_headline(headline)
+  
+  return {
+      "timestamp": datetime.utcnow(),
+      "headline": full_headline,
+      "summary": f"Alert released via {source_name} feed reporting that {headline.lower()}. Instantaneous pricing volatility recorded on correlated pairs.",
+      "source": source_name,
+      **impact
+  }
