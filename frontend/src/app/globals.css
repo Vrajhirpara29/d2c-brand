@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07080a;
+  --background: #04060c;
   --foreground: #f1f5f9;
-  --card: #111317;
-  --card-border: #1b1e25;
+  --card: rgba(10, 13, 20, 0.65);
+  --card-border: rgba(59, 130, 246, 0.08);
   
-  --primary: #10b981;
-  --primary-glow: rgba(16, 185, 129, 0.12);
+  --primary: #2563eb;
+  --primary-glow: rgba(37, 99, 235, 0.12);
   
   --bullish: #10b981;
   --bullish-glow: rgba(16, 185, 129, 0.25);
@@ -22,9 +22,9 @@
 body {
   background-color: var(--background);
   background-image: 
-    radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(244, 63, 94, 0.02) 0%, transparent 45%);
+    radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 10% 90%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(29, 78, 216, 0.04) 0%, transparent 45%);
   background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-outfit), system-ui, -apple-system, sans-serif;
