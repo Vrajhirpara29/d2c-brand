@@ -259,6 +259,37 @@ export default function Dashboard() {
     return { bullish: bullishPct, bearish: 100 - bullishPct };
   }, [newsFeed]);
 
+  // Unique news feed grouping by core headline text to show each news only once with all its affected pairs merged
+  const processedNewsFeed = useMemo(() => {
+    const seen = new Map<string, NewsItem>();
+    
+    // Process newsFeed from oldest to newest so newest updates take precedence
+    [...newsFeed].reverse().forEach((item) => {
+      // Remove standard breaking/alert prefixes to find core headline text
+      const core = item.headline.replace(/^(BREAKING|ALERT|MARKET NEWS|MACRO UPDATE):\s*/i, "").trim();
+      if (seen.has(core)) {
+        const existing = seen.get(core)!;
+        // Merge asset tags uniquely
+        const mergedTags = Array.from(new Set([
+          ...existing.asset_tags.split(",").map(t => t.trim()),
+          ...item.asset_tags.split(",").map(t => t.trim())
+        ].filter(Boolean))).join(", ");
+        
+        seen.set(core, {
+          ...item,
+          asset_tags: mergedTags
+        });
+      } else {
+        seen.set(core, { ...item });
+      }
+    });
+
+    // Sort the final unique list back to newest first
+    return Array.from(seen.values()).sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  }, [newsFeed]);
+
   const getNewsRelativeTime = (timestamp: string) => {
     const diff = Date.now() - new Date(timestamp).getTime();
     const mins = Math.floor(diff / 60000);
@@ -659,17 +690,17 @@ export default function Dashboard() {
               </div>
 
               {/* News cards list with vertical connector timeline rail */}
-              <div className="relative pl-6 space-y-6 max-h-[620px] overflow-y-auto pr-1.5 scrollbar-thin select-none">
+              <div className="relative pl-6 space-y-6 max-h-[620px] overflow-y-auto pr-1.5 scrollbar-thin">
                 
                 {/* Dashed Timeline Connector Line */}
                 <div className="absolute left-2.5 top-2 bottom-2 w-[1px] border-l border-dashed border-[#1b2742]/60 z-0" />
 
-                {newsFeed.length === 0 ? (
+                {processedNewsFeed.length === 0 ? (
                   <div className="p-6 text-center text-zinc-650 text-xs font-semibold uppercase tracking-widest border border-dashed border-[#1b2742]/30 rounded-xl">
                     No data in news feed
                   </div>
                 ) : (
-                  newsFeed.map((item) => {
+                  processedNewsFeed.map((item) => {
                     const isBullish = item.impact_direction === "Bullish";
                     const isBearish = item.impact_direction === "Bearish";
                     const hasHighSeverity = item.impact_severity === "High";
@@ -701,7 +732,7 @@ export default function Dashboard() {
                         >
                           <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest leading-none">
                             <span className={categoryColor}>{isBullish ? "BULLISH FLOW" : isBearish ? "BEARISH WAVE" : "STABILITY REPORT"}</span>
-                            <span className="text-zinc-550 font-bold">{getNewsRelativeTime(item.timestamp)}</span>
+                            <span className="text-zinc-555 font-bold">{getNewsRelativeTime(item.timestamp)}</span>
                           </div>
 
                           <h5 className="text-[11.5px] font-extrabold text-zinc-200 leading-snug">
@@ -725,7 +756,7 @@ export default function Dashboard() {
                             </div>
                           </div>
 
-                          <div className="flex justify-between items-center text-[8px] text-zinc-650 uppercase tracking-widest font-black pt-1.5 border-t border-[#1b2742]/20 mt-1 select-none">
+                          <div className="flex justify-between items-center text-[8px] text-zinc-600 uppercase tracking-widest font-black pt-1.5 border-t border-[#1b2742]/20 mt-1">
                             <span>Source: {item.source}</span>
                             <span className={`px-2 py-0.5 rounded text-[7.5px] border font-black tracking-normal ${
                               hasHighSeverity ? "bg-rose-500/5 border-[#ff0055]/30 text-[#ff0055]" : "bg-zinc-800/40 border-[#1b2742]/30 text-zinc-500"
