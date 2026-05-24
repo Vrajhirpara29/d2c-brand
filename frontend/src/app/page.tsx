@@ -757,6 +757,12 @@ export default function Dashboard() {
                             {item.headline}
                           </h5>
 
+                          {item.summary && (
+                            <p className="text-[10px] text-zinc-400 leading-relaxed font-normal bg-[#06080d]/40 p-2.5 border border-[#1b2742]/20 rounded-lg select-text">
+                              {item.summary}
+                            </p>
+                          )}
+
                           <div className="p-2.5 border border-[#1b2742]/30 bg-[#06080d]/80 rounded-lg flex flex-col gap-1.5 text-[9.5px]">
                             <div className="flex justify-between font-semibold">
                               <span className="text-zinc-550">Historical Impact:</span>

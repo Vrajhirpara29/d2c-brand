@@ -7,7 +7,7 @@ import random
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 
 from app.database import init_db, get_db, Asset, COTRecord, NewsFeedItem, CopierAccount, CopiedTrade, CopierLog
-from app.news import analyze_headline
+from app.news import analyze_headline, MOCK_HEADLINES
 
 # Target assets list
 TARGET_ASSETS = [
@@ -27,18 +27,7 @@ TARGET_ASSETS = [
     {"code": "COPPER", "name": "Copper", "type": "COMMODITY", "start_price": 3.85, "price_step": 0.015, "start_long": 65000, "start_short": 48000}
 ]
 
-MOCK_HISTORICAL_HEADLINES = [
-    "BREAKING: Fed Chair Powell signals rate cuts are delayed due to hot inflation data",
-    "MARKET ALERT: US CPI inflation beats estimates, hitting 3.5% YoY; USD surges",
-    "OPEC+ agrees to extend voluntary oil output cuts of 1.6M bpd through end of year",
-    "Geopolitical tensions spike in Middle East; safe haven gold crosses record highs",
-    "US economy adds 272k jobs in May, crushing forecasts and boosting Treasury yields",
-    "ALERT: China copper imports surge by 12% on manufacturing rebound indicators",
-    "DOVISH SHIFT: Fed cuts key rate by 50 bps as inflation cools to 2.5%",
-    "US CPI cools faster than expected to 2.9%, lifting risk assets and euro",
-    "NFP Jobs Miss: US adds just 114k jobs, triggering recession fears and gold buying",
-    "Crude prices slide 4% as OPEC+ debates boosting production capacity in Q4"
-]
+# Mock historical lists removed - utilizing app.news.MOCK_HEADLINES directly
 
 def seed_database():
     print("Initializing database...")
@@ -141,21 +130,37 @@ def seed_database():
     print("Seeding news feed...")
     db.query(NewsFeedItem).delete()
     
-    # Generate 15 news feed items distributed over the last 2 days
+    # Generate 45 news feed items distributed over the last 3 days
     base_time = datetime.utcnow()
-    sources = ["Bloomberg", "Reuters", "Financial Times", "MacroEdge Feed"]
+    sources = [
+        "Bloomberg Terminal",
+        "Reuters Eikon",
+        "ForexFactory Feed",
+        "Twitter / @ZeroHedge",
+        "Twitter / @LiveSquawk",
+        "Financial Times"
+    ]
     
-    for i in range(15):
-        headline = random.choice(MOCK_HISTORICAL_HEADLINES)
+    for i in range(45):
+        headline_data = random.choice(MOCK_HEADLINES)
+        headline, trigger, custom_summary = headline_data
         # Shift times slightly
-        timestamp = base_time - timedelta(hours=i * 3 + random.randint(0, 60))
+        timestamp = base_time - timedelta(hours=i * 2 + random.randint(0, 45))
         
         impact = analyze_headline(headline)
         
+        # Select high-frequency news channel prefixes
+        prefix = random.choice([
+            "Bloomberg Terminal [BBG]",
+            "ForexFactory News Alert",
+            "X / Twitter @ZeroHedge Feed",
+            "Reuters Eikon squawk line"
+        ])
+        
         db.add(NewsFeedItem(
             timestamp=timestamp,
-            headline=f"{headline} ({i+1}h ago)",
-            summary=f"Historical update: {headline}. Speculators adjusted institutional nets by +/- 4.5% across primary affected derivative indices.",
+            headline=f"[{prefix}] {headline}",
+            summary=custom_summary,
             source=random.choice(sources),
             asset_tags=impact["asset_tags"],
             impact_direction=impact["impact_direction"],

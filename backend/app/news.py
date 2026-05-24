@@ -295,30 +295,99 @@ def analyze_headline(headline: str) -> dict:
         "impact_severity": severity
     }
 
-# Mock news item generator for feeding live updates from earliest premium sources
+# Mock news item database with detailed summaries from earliest premium sources
 MOCK_HEADLINES = [
-    ("Powell signals Fed rate cut cycles are likely delayed due to sticky CPI core inflation", "hawkish_fed"),
-    ("US Consumer Price Index (CPI) surges 3.8% YoY, beating consensus estimates of 3.4%", "cpi_beat"),
-    ("US inflation cools rapidly to 2.9% in July, bolstering case for urgent rate cuts", "cpi_miss"),
-    ("US Non-Farm Payrolls (NFP) jump by 275k, blowing past expected 190k increase", "nfp_beat"),
-    ("US economy adds only 114k jobs, raising recession fears and Sahm Rule alerts", "nfp_miss"),
-    ("OPEC+ members agree to surprise voluntary production cuts of 2.2 million barrels per day", "opec_cut"),
-    ("Geopolitical conflict escalates in Middle East following drones targeting oil corridor tankers", "safe_haven"),
-    ("Saudi Arabia ready to ramp up crude output to defend market share, sparking price war", "opec_increase"),
-    ("ECB President Lagarde warns wage inflation keeps hawkish rate hikes on the table", "hawkish_fed"),
-    ("FOMC Statement: Fed cuts policy interest rates by 50bps to support softening job growth", "dovish_fed"),
-    ("US Core Retail Sales surge 0.8% MoM, indicating resilient domestic economic demand", "cpi_beat"),
-    ("Bank of Japan signals potential rate hike cycles ahead as yen drops to multi-decade low", "hawkish_fed"),
-    ("Flash: Red Sea commercial shipping corridor suspended after military drone attacks", "safe_haven"),
-    ("Gold prices break to record high above $2450/oz on aggressive global safe-haven buying", "safe_haven"),
-    ("Waller says rate cut cycles are getting closer if inflation keeps cooling down", "dovish_fed"),
-    ("Brent crude slides below $75 as OPEC+ outlines plans to gradually phase out supply cuts", "opec_increase"),
-    ("BOE raises Bank Rate by 25bps, warning of second-round inflation threats", "hawkish_fed")
+    (
+        "Powell signals Fed rate cut cycles are likely delayed due to sticky CPI core inflation",
+        "hawkish_fed",
+        "Fed Chairman Jerome Powell warned that persistent core inflation will delay any anticipated rate easing. Powell emphasized the FOMC's target remains a firm 2% YoY, and rates will remain high-for-longer if CPI persistence demands it. Yields spiked on the announcement, forcing EURUSD and GBPUSD lower."
+    ),
+    (
+        "US Consumer Price Index (CPI) surges 3.8% YoY, beating consensus estimates of 3.4%",
+        "cpi_beat",
+        "Inflation re-accelerated in today's annualized print, beating the forecasted 3.4% and printing at 3.8% YoY. Core CPI MoM also registered 0.4%. Financial market participants quickly adjusted expectations, dumping Treasury bonds and bidding the US Dollar Index (DXY) higher as a rate cut in the upcoming quarter appears increasingly unlikely."
+    ),
+    (
+        "US inflation cools rapidly to 2.9% in July, bolstering case for urgent rate cuts",
+        "cpi_miss",
+        "Consumer price index growth decelerated to 2.9% YoY in the latest report, undershooting market consensus forecasts of 3.1%. The cooling inflation rate has triggered immediate calls for rate cuts. Market probabilities of a 25bps FOMC rate cut next month rose from 40% to 85%, sending the US dollar down while gold prices surged."
+    ),
+    (
+        "US Non-Farm Payrolls (NFP) jump by 275k, blowing past expected 190k increase",
+        "nfp_beat",
+        "The US Bureau of Labor Statistics reported non-farm payrolls grew by 275,000 last month, substantially outperforming expectations of a 190,000 print. Average hourly earnings rose by 0.3% MoM, indicating that the labor market remains exceptionally tight. Swaps markets immediately repriced high-for-longer interest rates, boosting USD and triggering EURUSD selling."
+    ),
+    (
+        "US economy adds only 114k jobs, raising recession fears and Sahm Rule alerts",
+        "nfp_miss",
+        "The July jobs print came in weak at only 114,000 additions, missing expectations of 175,000. Additionally, the unemployment rate ticked up to 4.3%, triggering the Sahm Rule recession indicator. Yields plummeted as traders rushed to safe-haven assets, prompting a massive rally in gold and JPY while USD lost ground against all major majors."
+    ),
+    (
+        "OPEC+ members agree to surprise voluntary production cuts of 2.2 million barrels per day",
+        "opec_cut",
+        "In a surprise weekend virtual meeting, OPEC+ delegates agreed to voluntary crude production cuts totaling 2.2 million barrels per day through the end of the year. Saudi Arabia will maintain its unilateral 1 million bpd cut. Analysts indicate this supply reduction aims to counteract growing US shale production, sending WTI and Brent spot rates up by 3%."
+    ),
+    (
+        "Geopolitical conflict escalates in Middle East following drones targeting oil corridor tankers",
+        "safe_haven",
+        "Geopolitical risk premiums surged today after drone attacks hit multiple commercial tankers in the Bab-el-Mandeb strait. Safe-haven assets saw immediate inflows. Gold surged past record highs, USDJPY fell as yen rose on safe-haven flows, and WTI crude spiked due to concerns over oil transit security in the Suez Canal region."
+    ),
+    (
+        "Saudi Arabia ready to ramp up crude output to defend market share, sparking price war",
+        "opec_increase",
+        "Reports indicate Saudi Arabia is preparing to abandon its unofficial price targets and increase crude output in Q4 to protect market share against non-OPEC producers. The shift signals a potential supply glut. WTI and Brent crude futures fell immediately by over 4%, dragging USDCAD higher due to Canadian Dollar exposure to crude prices."
+    ),
+    (
+        "ECB President Lagarde warns wage inflation keeps hawkish rate hikes on the table",
+        "hawkish_fed",
+        "ECB President Christine Lagarde, speaking at the European Banking Congress, emphasized that wage growth across the eurozone remains too high to declare victory over inflation. Lagarde warned that if wage inflation does not decelerate, the ECB may hold policy rates at restrictive levels or consider further hikes, lifting the Euro against the USD."
+    ),
+    (
+        "FOMC Statement: Fed cuts policy interest rates by 50bps to support softening job growth",
+        "dovish_fed",
+        "The Federal Reserve cut its benchmark policy rate by 50 basis points, citing concerns over a softening labor market and stabilizing core inflation. The decision marks the beginning of an easing cycle. The dot plot indicates an additional 50bps of cuts are expected by year-end, sending the US Dollar down while equities and commodities surged."
+    ),
+    (
+        "US Core Retail Sales surge 0.8% MoM, indicating resilient domestic economic demand",
+        "cpi_beat",
+        "US core retail sales grew by 0.8% MoM, beating economist estimates of 0.2%. Consumer spending remains robust despite elevated borrowing costs. The positive consumer data indicates a soft landing is achievable, driving the US Dollar Index up on expectations that the Fed will not need to cut rates aggressively."
+    ),
+    (
+        "Bank of Japan signals potential rate hike cycles ahead as yen drops to multi-decade low",
+        "hawkish_fed",
+        "The Bank of Japan issued a strong warning that persistent yen weakness is lifting import inflation and may force the bank to hike interest rates sooner than expected. Governor Ueda noted the BOJ is monitoring currency depreciation closely. The remarks sparked a short-covering rally in the Japanese Yen, pulling USDJPY lower."
+    ),
+    (
+        "Flash: Red Sea commercial shipping corridor suspended after military drone attacks",
+        "safe_haven",
+        "Multiple global container shipping companies have suspended all transits through the Red Sea after military drone attacks damaged cargo vessels. Transit route diversions around Africa will add 10-14 days to global shipping times, raising concerns of supply chain delays and transport costs, driving WTI Crude and Gold higher."
+    ),
+    (
+        "Gold prices break to record high above $2450/oz on aggressive global safe-haven buying",
+        "safe_haven",
+        "Spot gold surged past $2,450 per ounce, printing a fresh record high. Capital flows are shifting out of risk assets into safe-haven precious metals due to geopolitical tensions and central bank accumulation. Analysts anticipate further gains if core yield curves remain inverted, boosting long speculators' allocations."
+    ),
+    (
+        "Waller says rate cut cycles are getting closer if inflation keeps cooling down",
+        "dovish_fed",
+        "Fed Governor Christopher Waller indicated that while the central bank should not rush to cut rates, recent cooling inflation figures are highly encouraging. Waller noted that if CPI prints continue on this path, he would support rate cuts in the near term, prompting immediate USD selling and a moderate rally in EURUSD."
+    ),
+    (
+        "Brent crude slides below $75 as OPEC+ outlines plans to gradually phase out supply cuts",
+        "opec_increase",
+        "Brent Crude dropped below $75 per barrel after OPEC+ announced a framework to gradually phase out voluntary production cuts of 2.2 million bpd. The market reacted to the prospect of increased supply, sending WTI and Brent lower. USDCAD rose as the oil-linked Canadian Dollar softened."
+    ),
+    (
+        "BOE raises Bank Rate by 25bps, warning of second-round inflation threats",
+        "hawkish_fed",
+        "The Bank of England raised its policy rate by 25 basis points to 5.25%. The Monetary Policy Committee warned that wage growth and service-sector inflation remain stubbornly high, suggesting that rates must remain restrictive for an extended period, which supported the British Pound against the US Dollar."
+    )
 ]
 
 def generate_live_news_item() -> dict:
   """Generates a random news feed item simulating real-time high-speed feeds."""
-  headline, trigger = random.choice(MOCK_HEADLINES)
+  headline_data = random.choice(MOCK_HEADLINES)
+  headline, trigger, custom_summary = headline_data
   
   # Select high-frequency news channels
   channels = [
@@ -338,7 +407,7 @@ def generate_live_news_item() -> dict:
   return {
       "timestamp": datetime.utcnow(),
       "headline": full_headline,
-      "summary": f"Alert released via {source_name} feed reporting that {headline.lower()}. Instantaneous pricing volatility recorded on correlated pairs.",
+      "summary": custom_summary,
       "source": source_name,
       **impact
   }
